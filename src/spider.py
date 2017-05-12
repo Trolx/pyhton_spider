@@ -12,7 +12,7 @@ import urllib2
 import itertools
 import urlparse
 import robotparser
-
+import Throttle
 
 def download_network_page(url,user_agent='wswp', num_retries = 2):
     print 'Downloading : ', url
@@ -43,20 +43,33 @@ def link_crawler(seed_url, link_regex):
      :param link_regex: 
      :return: 
      """
+    #read the robots.txt
+    rp = robotparser.RobotFileParser()
+    rp.set_url('http://example.webscraping.com/robots.txt')
+    rp.read()
+    #set the agent's name
+    user_agent = "667's Python Spider"
+    #set the delay for crawl speed    5 second
 
+    th = Throttle.Throttle(5)
+
+    #set the crawl queue for crawled url
     crawl_queue = [seed_url]
     visited = set(crawl_queue)
     while crawl_queue:
         url = crawl_queue.pop()
-        html = download_network_page(url)
-        # filter for links matching out regular expression
-        for link in get_links(html):
-            if re.match(link_regex, link):
-                link = urlparse.urljoin(seed_url, link)
+        if rp.can_fetch(user_agent,url):
+            th.wait(url)
+            html = download_network_page(url)
+            print html
+            # filter for links matching out regular expression
+            for link in get_links(html):
+                if re.match(link_regex, link):
+                    link = urlparse.urljoin(seed_url, link)
 
-                if link not in visited:
-                    visited.add(link)
-                    crawl_queue.append(link)
+                    if link not in visited:
+                        visited.add(link)
+                        crawl_queue.append(link)
 
 
 def get_links(html):
@@ -101,15 +114,9 @@ url = 'http://example.webscraping.com/sitemap.xml'
 #     else:
 #         num_errors = 0
 
-rp = robotparser.RobotFileParser()
-rp.set_url('http://example.webscraping.com/robots.txt')
-rp.read()
 
 url = 'http://example.webscraping.com'
-user_agent = 'BadCrawler'
-print rp.can_fetch(user_agent,url)
 
-user_agent = 'GoodCrawler'
-print rp.can_fetch(user_agent,url)
 
-# link_crawler('http://example.webscraping.com', '/(index|view)')
+
+link_crawler('http://example.webscraping.com', '/(index|view)')
